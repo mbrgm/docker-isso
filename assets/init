@@ -111,6 +111,13 @@ sed 's/{{MARKUP_ALLOWED_ATTRIBUTES}}/'"${MARKUP_ALLOWED_ATTRIBUTES}"'/' \
     -i /etc/isso.cfg
 
 
+#########################
+# Create directories
+#########################
+
+mkdir -p /data/spool/uwsgi
+
+
 ########################
 # Setup permissions
 ########################
@@ -129,6 +136,6 @@ uwsgi --http :8000 \
       --gid uwsgi \
       --processes ${UWSGI_NUM_PROCESSES} \
       --cache2 name=hash,items=${UWSGI_NUM_CACHEITEMS},blocksize=${UWSGI_CACHE_BLOCKSIZE} \
-      --spooler /tmp/isso/mail \
+      --spooler /data/spool/uwsgi \
       --module isso.run \
       --env ISSO_SETTINGS=/etc/isso.cfg
