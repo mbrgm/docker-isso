@@ -41,6 +41,49 @@ UWSGI_NUM_CACHEITEMS=${UWSGI_NUM_CACHEITEMS:-1024}
 UWSGI_CACHE_BLOCKSIZE=${UWSGI_CACHE_BLOCKSIZE:-32}
 
 
+################################
+# Check mandatory variables
+################################
+
+echo "Checking environment variables..."
+
+
+if [[ -z $HOST ]]; then
+    echo "HOST is mandatory."
+    exit -1
+fi
+
+
+if [[ $NOTIFY == "smtp" ]]; then
+
+    if [[ -z $SMTP_USERNAME ]]; then
+        echo "SMTP_USERNAME is mandatory for SMTP notification."
+        exit -1
+    fi
+
+    if [[ -z $SMTP_PASSWORD ]]; then
+        echo "SMTP_PASSWORD is mandatory for SMTP notification."
+        exit -1
+    fi
+
+    if [[ -z $SMTP_HOST ]]; then
+        echo "SMTP_HOST is mandatory for SMTP notification."
+        exit -1
+    fi
+
+    if [[ -z $SMTP_TO ]]; then
+        echo "SMTP_TO is mandatory for SMTP notification."
+        exit -1
+    fi
+
+    if [[ -z $SMTP_FROM ]]; then
+        echo "SMTP_FROM is mandatory for SMTP notification."
+        exit -1
+    fi
+
+fi
+
+
 #####################
 # Configure isso
 #####################
