@@ -1,0 +1,184 @@
+#!/bin/bash
+
+set -e 
+
+###########################
+# Gather configuration
+###########################
+
+#==========
+# Isso
+#==========
+
+HOST=${HOST:-}
+MAX_AGE=${MAX_AGE:-15m}
+NOTIFY=${NOTIFY:-stdout}
+MODERATION_ENABLED=${MODERATION_ENABLED:-false}
+MODERATION_PURGE_AFTER=${MODERATION_PURGE_AFTER:-30d}
+SMTP_USERNAME=${SMTP_USERNAME:-}
+SMTP_PASSWORD=${SMTP_PASSWORD:-}
+SMTP_HOST=${SMTP_HOST:-}
+SMTP_PORT=${SMTP_PORT:-587}
+SMTP_SECURITY=${SMTP_SECURITY:-starttls}
+SMTP_TO=${SMTP_TO:-}
+SMTP_FROM=${SMTP_FROM:-}
+SMTP_TIMEOUT=${SMTP_TIMEOUT:-10}
+GUARD_ENABLED=${GUARD_ENABLED:-true}
+GUARD_RATELIMIT=${GUARD_RATELIMIT:-2}
+GUARD_DIRECT_REPLY=${GUARD_DIRECT_REPLY:-3}
+GUARD_REPLY_TO_SELF=${GUARD_REPLY_TO_SELF:-false}
+MARKUP_OPTIONS=${MARKUP_OPTIONS:-"strikethrough, superscript, autolink"}
+MARKUP_ALLOWED_ELEMENTS=${MARKUP_ALLOWED_ELEMENTS:-}
+MARKUP_ALLOWED_ATTRIBUTES=${MARKUP_ALLOWED_ATTRIBUTES:-}
+
+
+#===========
+# uWSGI
+#===========
+
+UWSGI_NUM_PROCESSES=${UWSGI_NUM_PROCESSES:-4}
+UWSGI_NUM_CACHEITEMS=${UWSGI_NUM_CACHEITEMS:-1024}
+UWSGI_CACHE_BLOCKSIZE=${UWSGI_CACHE_BLOCKSIZE:-32}
+
+
+################################
+# Check mandatory variables
+################################
+
+echo "Checking environment variables..."
+
+
+if [[ -z $HOST ]]; then
+    echo "HOST is mandatory."
+    exit -1
+fi
+
+
+if [[ $NOTIFY == "smtp" ]]; then
+
+    if [[ -z $SMTP_USERNAME ]]; then
+        echo "SMTP_USERNAME is mandatory for SMTP notification."
+        exit -1
+    fi
+
+    if [[ -z $SMTP_PASSWORD ]]; then
+        echo "SMTP_PASSWORD is mandatory for SMTP notification."
+        exit -1
+    fi
+
+    if [[ -z $SMTP_HOST ]]; then
+        echo "SMTP_HOST is mandatory for SMTP notification."
+        exit -1
+    fi
+
+    if [[ -z $SMTP_TO ]]; then
+        echo "SMTP_TO is mandatory for SMTP notification."
+        exit -1
+    fi
+
+    if [[ -z $SMTP_FROM ]]; then
+        echo "SMTP_FROM is mandatory for SMTP notification."
+        exit -1
+    fi
+
+fi
+
+
+#####################
+# Configure isso
+#####################
+
+cp /app/isso.cfg /etc/isso.cfg
+
+# NOTE: I'm using the pipe as a separator in the below sed expression, as the
+#       site's host is likely to contain slashes, but not pipes. This way sed
+#       doesn't struggle with the slashes.
+sed 's|{{HOST}}|'"${HOST}"'|' \
+    -i /etc/isso.cfg
+
+sed 's/{{MAX_AGE}}/'"${MAX_AGE}"'/' \
+    -i /etc/isso.cfg
+
+sed 's/{{NOTIFY}}/'"${NOTIFY}"'/' \
+    -i /etc/isso.cfg
+
+sed 's/{{MODERATION_ENABLED}}/'"${MODERATION_ENABLED}"'/' \
+    -i /etc/isso.cfg
+
+sed 's/{{MODERATION_PURGE_AFTER}}/'"${MODERATION_PURGE_AFTER}"'/' \
+    -i /etc/isso.cfg
+
+sed 's/{{SMTP_USERNAME}}/'"${SMTP_USERNAME}"'/' \
+    -i /etc/isso.cfg
+
+sed 's/{{SMTP_PASSWORD}}/'"${SMTP_PASSWORD}"'/' \
+    -i /etc/isso.cfg
+
+sed 's/{{SMTP_HOST}}/'"${SMTP_HOST}"'/' \
+    -i /etc/isso.cfg
+
+sed 's/{{SMTP_PORT}}/'"${SMTP_PORT}"'/' \
+    -i /etc/isso.cfg
+
+sed 's/{{SMTP_SECURITY}}/'"${SMTP_SECURITY}"'/' \
+    -i /etc/isso.cfg
+
+sed 's/{{SMTP_TO}}/'"${SMTP_TO}"'/' \
+    -i /etc/isso.cfg
+
+sed 's/{{SMTP_FROM}}/'"${SMTP_FROM}"'/' \
+    -i /etc/isso.cfg
+
+sed 's/{{SMTP_TIMEOUT}}/'"${SMTP_TIMEOUT}"'/' \
+    -i /etc/isso.cfg
+
+sed 's/{{GUARD_ENABLED}}/'"${GUARD_ENABLED}"'/' \
+    -i /etc/isso.cfg
+
+sed 's/{{GUARD_RATELIMIT}}/'"${GUARD_RATELIMIT}"'/' \
+    -i /etc/isso.cfg
+
+sed 's/{{GUARD_DIRECT_REPLY}}/'"${GUARD_DIRECT_REPLY}"'/' \
+    -i /etc/isso.cfg
+
+sed 's/{{GUARD_REPLY_TO_SELF}}/'"${GUARD_REPLY_TO_SELF}"'/' \
+    -i /etc/isso.cfg
+
+sed 's/{{MARKUP_OPTIONS}}/'"${MARKUP_OPTIONS}"'/' \
+    -i /etc/isso.cfg
+
+sed 's/{{MARKUP_ALLOWED_ELEMENTS}}/'"${MARKUP_ALLOWED_ELEMENTS}"'/' \
+    -i /etc/isso.cfg
+
+sed 's/{{MARKUP_ALLOWED_ATTRIBUTES}}/'"${MARKUP_ALLOWED_ATTRIBUTES}"'/' \
+    -i /etc/isso.cfg
+
+
+#########################
+# Create directories
+#########################
+
+mkdir -p /data/spool/uwsgi
+
+
+########################
+# Setup permissions
+########################
+
+chown -R uwsgi:uwsgi /data/
+chmod -R 700 /data/
+
+
+################
+# Run uWSGI
+################
+
+uwsgi --http :8000 \
+      --master \
+      --uid uwsgi \
+      --gid uwsgi \
+      --processes ${UWSGI_NUM_PROCESSES} \
+      --cache2 name=hash,items=${UWSGI_NUM_CACHEITEMS},blocksize=${UWSGI_CACHE_BLOCKSIZE} \
+      --spooler /data/spool/uwsgi \
+      --module isso.run \
+      --env ISSO_SETTINGS=/etc/isso.cfg
