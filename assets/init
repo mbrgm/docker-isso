@@ -88,7 +88,7 @@ fi
 # Configure isso
 #####################
 
-cp /app/isso.cfg /etc/isso.cfg
+cp /app/isso.cfg.template /etc/isso.cfg
 
 # NOTE: I'm using the pipe as a separator in the below sed expression, as the
 #       site's host is likely to contain slashes, but not pipes. This way sed

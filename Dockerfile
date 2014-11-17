@@ -1,6 +1,6 @@
 # Isso
 #
-# VERSION 0.2.0
+# VERSION 0.2.1
 
 FROM debian:wheezy
 
@@ -13,7 +13,7 @@ RUN apt-get update \
     && apt-get autoremove -y \
     && useradd -M -s /usr/sbin/nologin uwsgi
 
-ADD assets/isso/isso.cfg /app/isso.cfg
+ADD assets/isso/isso.cfg.template /app/isso.cfg.template
 ADD assets/init /app/init
 
 RUN chmod 755 /app/init \
